@@ -20,6 +20,65 @@
             background-color: rgba(0, 0, 0, 0.6);
             border-radius: 16px;
             margin-top: 40px;
+            position: relative;
+        }
+
+        .payment-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .payment-box {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .payment-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            margin: 15px 5px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        .pix-code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+        }
+
+        .verification-code {
+            margin-top: 20px;
+        }
+
+        .verification-input {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            margin-top: 10px;
+            width: 150px;
+            text-align: center;
         }
 
         header {
@@ -130,10 +189,56 @@
         .speed-test-btn:hover {
             opacity: 0.9;
         }
+
+        .hidden {
+            display: none;
+        }
+
+        .whatsapp-link {
+            color: #25D366;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .no-code {
+            margin-top: 15px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Overlay de pagamento -->
+        <div class="payment-overlay" id="payment-overlay">
+            <div class="payment-box">
+                <h2>Confirmação de Entrega</h2>
+                <p>Para liberar o rastreamento completo do seu kit Starlink e confirmar a entrega, é necessário o pagamento de uma taxa de confirmação de R$4,99 via PIX.</p>
+                
+                <div class="pix-code" id="pix-code">
+                    Chave PIX: <span id="pix-key">starlinkpagamentos2gmail.com</span><br>
+                    Valor: R$ 4,99<br>
+                    <button class="payment-btn" style="margin-top:10px;" onclick="copyPixKey()">Copiar Chave PIX</button>
+                </div>
+                
+                <p>Esta taxa garante que seu kit completo será entregue e ativado conforme o padrão Starlink.</p>
+                
+                <button class="payment-btn" onclick="showVerification()">Já Paguei via PIX</button>
+
+                <div class="verification-code hidden" id="verification-code">
+                    <p>Digite o código de 6 dígitos recebido após o pagamento:</p>
+                    <input type="text" class="verification-input" id="verification-input" placeholder="Código de 6 dígitos" maxlength="6">
+                    <button class="payment-btn" onclick="verifyCode()">Confirmar Código</button>
+                    
+                    <div class="no-code">
+                        <p>Não recebeu o código? <br>Clique Abaixo Em WhatsApp Do Revendedor:</p>
+                        <a href="https://wa.me/5511999999999?text=Olá,%20não%20recebi%20o%20código%20de%20confirmação%20Starlink" class="whatsapp-link" target="_blank">
+                            WhatsApp do Revendedor
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <header>
             <h1>Rastreador Starlink</h1>
             <div class="status-badge">ONLINE</div>
@@ -185,6 +290,7 @@
                 </div>
                 <p>Status: <strong id="delivery-status">Processando</strong></p>
                 <p>Previsão de entrega: <strong>5 dias úteis</strong></p>
+                <p style="font-size: 12px; color: #ffcc00;">Pagamento Confirmado Só Aguardar A Entrega</p>
             </div>
         </div>
 
@@ -194,14 +300,26 @@
     </div>
 
     <script>
-        // Usar localStorage para salvar o tempo de início
+        const VALIDATION_CODE = "087256";
+        const isVerified = localStorage.getItem("starlinkPaymentVerified");
+
+        if (isVerified === "true") {
+            document.getElementById('payment-overlay').classList.add('hidden');
+            startTracking();
+        }
+
         let startTime = localStorage.getItem("starlinkStartTime");
         if (!startTime) {
             startTime = new Date().toISOString();
-            localStorage.setItem("starlinkStartTime", startTime);
         }
         const startDate = new Date(startTime);
         document.getElementById('order-date').textContent = startDate.toLocaleString('pt-BR');
+
+        function startTracking() {
+            document.getElementById('delivery-status').textContent = "Pagamento confirmado - Em preparação";
+            updateDeliveryCounter();
+            setInterval(updateDeliveryCounter, 1000);
+        }
 
         function updateDeliveryCounter() {
             const now = new Date();
@@ -214,7 +332,7 @@
             document.getElementById('delivery-counter').textContent =
                 `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-            const totalTime = 5 * 24 * 60 * 60 * 1000; // 5 dias
+            const totalTime = 5 * 24 * 60 * 60 * 1000;
             const progress = Math.min((diff / totalTime) * 100, 100);
             document.getElementById('delivery-progress').style.width = `${progress}%`;
 
@@ -251,7 +369,6 @@
             document.getElementById('coverage').textContent = `${coverage}%`;
         }
 
-        // Obter localização aproximada e atualizar o mapa
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(position => {
                 const lat = position.coords.latitude;
@@ -261,9 +378,39 @@
             });
         }
 
-        setInterval(updateDeliveryCounter, 1000);
+        function showVerification() {
+            document.getElementById('verification-code').classList.remove('hidden');
+            document.querySelector('.payment-btn').classList.add('hidden');
+        }
+
+        function verifyCode() {
+            const code = document.getElementById('verification-input').value;
+            if (code && code.trim() === VALIDATION_CODE) {
+                localStorage.setItem("starlinkPaymentVerified", "true");
+
+                if (!localStorage.getItem("starlinkStartTime")) {
+                    const now = new Date().toISOString();
+                    localStorage.setItem("starlinkStartTime", now);
+                }
+
+                document.getElementById('payment-overlay').classList.add('hidden');
+                alert("Pagamento confirmado! Seu kit Starlink está sendo preparado para envio.");
+                startTracking();
+            } else {
+                alert("Código inválido! Por favor, verifique o código recebido ou entre em contato com o revendedor.");
+            }
+        }
+
+        function copyPixKey() {
+            const pixKey = document.getElementById('pix-key').textContent;
+            navigator.clipboard.writeText(pixKey).then(() => {
+                alert("Chave PIX copiada para a área de transferência!");
+            }).catch(err => {
+                alert("Erro ao copiar a chave PIX. Copie manualmente.");
+            });
+        }
+
         setInterval(updateNetworkStats, 5000);
-        updateDeliveryCounter();
         updateNetworkStats();
     </script>
 </body>
