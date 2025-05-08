@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastreador Starlink</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: url('https://img.olhardigital.com.br/wp-content/uploads/2019/10/20191016095611.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 16px;
+            margin-top: 40px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            background-color: green;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .dashboard {
+            margin-top: 20px;
+        }
+
+        .card {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .map-container {
+            height: 300px;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .delivery-card {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .countdown {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #3671e9, #5e3bec);
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px 0;
+            font-size: 12px;
+            opacity: 0.6;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .speed-test-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .speed-test-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Rastreador Starlink</h1>
+            <div class="status-badge">ONLINE</div>
+        </header>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2>Estatísticas da Rede</h2>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="value" id="satellites">2,543</div>
+                        <div class="label">Satélites Ativos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="coverage">98%</div>
+                        <div class="label">Cobertura</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="latency">150ms</div>
+                        <div class="label">Latência</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="obfuscation">85%</div>
+                        <div class="label">Obfuscação*</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="download-speed">120</div>
+                        <div class="label">Download (Mbps)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="upload-speed">45</div>
+                        <div class="label">Upload (Mbps)</div>
+                    </div>
+                </div>
+                <button class="speed-test-btn" onclick="runSpeedTest()">Testar Velocidade</button>
+                <div class="map-container" id="map-container">
+                    <iframe id="map-frame" src="https://maps.google.com/maps?q=spacex&t=k&z=3&output=embed" allowfullscreen></iframe>
+                </div>
+                <p style="font-size: 10px; opacity: 0.7; margin-top: 10px;">*Obfuscação: técnica para melhorar privacidade da rede.</p>
+            </div>
+
+            <div class="card delivery-card">
+                <h2>Entrega do Seu Kit Starlink</h2>
+                <p>Pedido realizado em: <strong id="order-date"></strong></p>
+                <p>Tempo desde a compra:</p>
+                <div class="countdown" id="delivery-counter">00:00:00</div>
+                <div class="progress-bar">
+                    <div class="progress" id="delivery-progress"></div>
+                </div>
+                <p>Status: <strong id="delivery-status">Processando</strong></p>
+                <p>Previsão de entrega: <strong>5 dias úteis</strong></p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 Rastreador Starlink - SpaceX.</p>
+        </div>
+    </div>
+
+    <script>
+        // Usar localStorage para salvar o tempo de início
+        let startTime = localStorage.getItem("starlinkStartTime");
+        if (!startTime) {
+            startTime = new Date().toISOString();
+            localStorage.setItem("starlinkStartTime", startTime);
+        }
+        const startDate = new Date(startTime);
+        document.getElementById('order-date').textContent = startDate.toLocaleString('pt-BR');
+
+        function updateDeliveryCounter() {
+            const now = new Date();
+            const diff = now - startDate;
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('delivery-counter').textContent =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            const totalTime = 5 * 24 * 60 * 60 * 1000; // 5 dias
+            const progress = Math.min((diff / totalTime) * 100, 100);
+            document.getElementById('delivery-progress').style.width = `${progress}%`;
+
+            if (diff > 3 * 24 * 60 * 60 * 1000) {
+                document.getElementById('delivery-status').textContent = "Em transporte";
+            } else if (diff > 1 * 24 * 60 * 60 * 1000) {
+                document.getElementById('delivery-status').textContent = "Preparando envio";
+            }
+        }
+
+        function runSpeedTest() {
+            document.getElementById('download-speed').textContent = "...";
+            document.getElementById('upload-speed').textContent = "...";
+
+            setTimeout(() => {
+                const download = (Math.random() * 200 + 50).toFixed(0);
+                const upload = (Math.random() * 100 + 20).toFixed(0);
+
+                document.getElementById('download-speed').textContent = download;
+                document.getElementById('upload-speed').textContent = upload;
+
+                document.getElementById('latency').textContent = `${Math.max(20, 150 - download / 10).toFixed(0)}ms`;
+            }, 2000);
+        }
+
+        function updateNetworkStats() {
+            const obfuscation = (Math.random() * 20 + 80).toFixed(0);
+            document.getElementById('obfuscation').textContent = `${obfuscation}%`;
+
+            const satellites = 2543 + Math.floor(Math.random() * 10 - 5);
+            document.getElementById('satellites').textContent = satellites.toLocaleString('pt-BR');
+
+            const coverage = (98 + (Math.random() * 2 - 1)).toFixed(1);
+            document.getElementById('coverage').textContent = `${coverage}%`;
+        }
+
+        // Obter localização aproximada e atualizar o mapa
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                document.getElementById('map-frame').src =
+                    `https://maps.google.com/maps?q=${lat},${lon}&t=k&z=5&output=embed`;
+            });
+        }
+
+        setInterval(updateDeliveryCounter, 1000);
+        setInterval(updateNetworkStats, 5000);
+        updateDeliveryCounter();
+        updateNetworkStats();
+    </script>
+</body>
+</html>
